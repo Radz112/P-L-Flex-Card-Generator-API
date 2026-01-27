@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 
 const C = { reset: '\x1b[0m', dim: '\x1b[2m', red: '\x1b[31m', green: '\x1b[32m', yellow: '\x1b[33m', blue: '\x1b[34m', cyan: '\x1b[36m' };
-const methodColor: any = { GET: C.green, POST: C.blue, PUT: C.yellow, DELETE: C.red };
+const methodColor: Record<string, string> = { GET: C.green, POST: C.blue, PUT: C.yellow, DELETE: C.red };
 
 export function requestLogger(req: Request, res: Response, next: NextFunction): void {
   const start = Date.now();

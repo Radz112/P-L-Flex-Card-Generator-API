@@ -4,7 +4,7 @@ import express from 'express';
 import cardRoutes from '../src/routes/cardRoutes';
 import { loadFonts } from '../src/utils/fontLoader';
 import { errorHandler, notFoundHandler } from '../src/utils/errorHandler';
-import { metricsMiddleware, getMetrics, resetMetrics } from '../src/utils/metrics';
+import { metricsMiddleware, getMetrics } from '../src/utils/metrics';
 
 function createTestApp() {
   const fontStatus = loadFonts();
@@ -297,6 +297,43 @@ describe('API', () => {
       expect(res.body).toHaveProperty('requests_per_minute');
       expect(typeof res.body.total_requests).toBe('number');
       expect(res.body.total_requests).toBeGreaterThan(0);
+    });
+
+    it('tracks errors correctly', async () => {
+      const before = await request(server, 'GET', '/metrics');
+      const initialErrors = before.body.total_errors;
+      const initialRequests = before.body.total_requests;
+
+      await request(server, 'POST', '/api/v1/generate-card', {});
+      await request(server, 'POST', '/api/v1/generate-card', { ticker: '' });
+
+      const after = await request(server, 'GET', '/metrics');
+      expect(after.body.total_requests).toBe(initialRequests + 3);
+      expect(after.body.total_errors).toBe(initialErrors + 2);
+    });
+
+    it('calculates error rate', async () => {
+      const res = await request(server, 'GET', '/metrics');
+      expect(res.body.error_rate_percent).toBeGreaterThanOrEqual(0);
+      expect(res.body.error_rate_percent).toBeLessThanOrEqual(100);
+      const calculatedRate = (res.body.total_errors / res.body.total_requests) * 100;
+      expect(res.body.error_rate_percent).toBeCloseTo(calculatedRate, 1);
+    });
+
+    it('tracks latency', async () => {
+      const res = await request(server, 'GET', '/metrics');
+      expect(res.body.avg_latency_ms).toBeGreaterThanOrEqual(0);
+      expect(res.body.avg_latency_ms).toBeLessThan(10000);
+    });
+
+    it('tracks uptime', async () => {
+      const res = await request(server, 'GET', '/metrics');
+      expect(res.body.uptime_seconds).toBeGreaterThan(0);
+    });
+
+    it('calculates requests per minute', async () => {
+      const res = await request(server, 'GET', '/metrics');
+      expect(res.body.requests_per_minute).toBeGreaterThanOrEqual(0);
     });
   });
 });

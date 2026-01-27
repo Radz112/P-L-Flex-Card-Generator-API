@@ -45,10 +45,3 @@ export function getMetrics() {
   };
 }
 
-export function resetMetrics(): void {
-  metrics.requests = 0;
-  metrics.errors = 0;
-  metrics.latencySum = 0;
-  metrics.latencyCount = 0;
-  metrics.startTime = Date.now();
-}

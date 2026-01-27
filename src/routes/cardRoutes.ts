@@ -17,9 +17,26 @@ interface CardRequest {
   timestamp?: string;
 }
 
-function extractBody(body: any): CardRequest {
+interface RawBody {
+  ticker?: unknown;
+  entry_price?: unknown;
+  current_price?: unknown;
+  theme?: unknown;
+  wallet_tag?: unknown;
+  timestamp?: unknown;
+  body?: RawBody;
+}
+
+function extractBody(body: RawBody): CardRequest {
   const d = body?.body && typeof body.body === 'object' ? body.body : body;
-  return { ticker: d.ticker, entry_price: d.entry_price, current_price: d.current_price, theme: d.theme, wallet_tag: d.wallet_tag, timestamp: d.timestamp };
+  return {
+    ticker: d?.ticker as string,
+    entry_price: d?.entry_price as number,
+    current_price: d?.current_price as number,
+    theme: d?.theme as Theme | undefined,
+    wallet_tag: d?.wallet_tag as string | undefined,
+    timestamp: d?.timestamp as string | undefined
+  };
 }
 
 function validate(b: CardRequest): string[] {
