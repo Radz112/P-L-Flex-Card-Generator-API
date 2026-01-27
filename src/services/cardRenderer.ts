@@ -1,4 +1,3 @@
-// Card renderer - generates P&L flex card images using canvas
 import { createCanvas, CanvasRenderingContext2D } from 'canvas';
 import { PnLResult, formatTokenPrice } from '../utils/pnlCalculator';
 
@@ -16,8 +15,10 @@ export interface CardData {
   timestamp?: string;
 }
 
-interface ThemeColors {
-  bg: string | CanvasGradient;
+type Gradient = ReturnType<CanvasRenderingContext2D['createLinearGradient']>;
+
+interface Colors {
+  bg: string | Gradient;
   bgBox: string;
   text: string;
   textDim: string;
@@ -26,9 +27,7 @@ interface ThemeColors {
   border?: string;
 }
 
-type CanvasGradient = ReturnType<CanvasRenderingContext2D['createLinearGradient']>;
-
-function getColors(ctx: CanvasRenderingContext2D, theme: Theme): ThemeColors {
+function getColors(ctx: CanvasRenderingContext2D, theme: Theme): Colors {
   const grad = (y = true) => ctx.createLinearGradient(0, 0, y ? 0 : CARD_WIDTH, CARD_HEIGHT);
 
   if (theme === 'light') {
@@ -39,12 +38,11 @@ function getColors(ctx: CanvasRenderingContext2D, theme: Theme): ThemeColors {
     const g = grad(false); g.addColorStop(0, '#0a0015'); g.addColorStop(0.5, '#1a0030'); g.addColorStop(1, '#0f1a00');
     return { bg: g, bgBox: '#2a1050', text: '#fff', textDim: '#aa88ff', profit: '#0f0', loss: '#f06' };
   }
-  // dark (default)
   const g = grad(); g.addColorStop(0, '#0d0d0d'); g.addColorStop(1, '#1a1a2e');
   return { bg: g, bgBox: '#252540', text: '#fff', textDim: '#888899', profit: '#00ff88', loss: '#f46' };
 }
 
-function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number): void {
+function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
   ctx.beginPath();
   ctx.moveTo(x + r, y);
   ctx.arcTo(x + w, y, x + w, y + h, r);
@@ -54,7 +52,7 @@ function roundedRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: num
   ctx.closePath();
 }
 
-function drawDegenEffects(ctx: CanvasRenderingContext2D): void {
+function drawDegenEffects(ctx: CanvasRenderingContext2D) {
   // Scanlines
   ctx.globalAlpha = 0.03;
   ctx.fillStyle = '#fff';
@@ -79,7 +77,6 @@ export function renderCard(data: CardData, theme: Theme): Buffer {
   const colors = getColors(ctx, theme);
   const pnlColor = data.pnl.isProfit ? colors.profit : colors.loss;
 
-  // Background
   ctx.fillStyle = colors.bg;
   ctx.fillRect(0, 0, CARD_WIDTH, CARD_HEIGHT);
 
@@ -88,13 +85,13 @@ export function renderCard(data: CardData, theme: Theme): Buffer {
 
   const pad = 60, cx = CARD_WIDTH / 2;
 
-  // Header: token symbol + label
+  // Header
   ctx.fillStyle = colors.text; ctx.font = 'bold 72px Roboto'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
   ctx.fillText(`$${data.tokenSymbol.toUpperCase()}`, pad, pad);
   ctx.fillStyle = colors.textDim; ctx.font = 'bold 28px Roboto'; ctx.textAlign = 'right';
   ctx.fillText('P&L CARD', CARD_WIDTH - pad, pad + 10);
 
-  // Main P&L percentage
+  // Main percentage
   ctx.fillStyle = pnlColor; ctx.font = 'bold 140px Roboto'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
   ctx.fillText(data.pnl.formattedGain, cx, 270);
   if (theme === 'degen') { ctx.shadowColor = pnlColor; ctx.shadowBlur = 30; ctx.fillText(data.pnl.formattedGain, cx, 270); ctx.shadowBlur = 0; }
@@ -103,21 +100,18 @@ export function renderCard(data: CardData, theme: Theme): Buffer {
   const boxW = 480, boxH = 100, boxY = 380, gap = 40;
   const entryX = cx - boxW - gap / 2, currX = cx + gap / 2;
 
-  // Entry box
   roundedRect(ctx, entryX, boxY, boxW, boxH, 16); ctx.fillStyle = colors.bgBox; ctx.fill();
   ctx.fillStyle = colors.textDim; ctx.font = 'bold 24px Roboto'; ctx.textBaseline = 'top';
   ctx.fillText('ENTRY', entryX + boxW / 2, boxY + 15);
   ctx.fillStyle = colors.text; ctx.font = 'bold 36px Roboto';
   ctx.fillText(formatTokenPrice(data.entryPrice), entryX + boxW / 2, boxY + 50);
 
-  // Current box
   roundedRect(ctx, currX, boxY, boxW, boxH, 16); ctx.fillStyle = colors.bgBox; ctx.fill();
   ctx.fillStyle = colors.textDim; ctx.font = 'bold 24px Roboto';
   ctx.fillText('CURRENT', currX + boxW / 2, boxY + 15);
   ctx.fillStyle = pnlColor; ctx.font = 'bold 36px Roboto';
   ctx.fillText(formatTokenPrice(data.currentPrice), currX + boxW / 2, boxY + 50);
 
-  // Arrow
   ctx.fillStyle = colors.textDim; ctx.font = 'bold 40px Roboto'; ctx.textBaseline = 'middle';
   ctx.fillText('→', cx, boxY + boxH / 2);
 

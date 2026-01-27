@@ -145,7 +145,7 @@ describe('calculatePnL', () => {
       const result = calculatePnL(0, 100);
       expect('error' in result).toBe(true);
       if ('error' in result) {
-        expect(result.message).toBe('Entry price must be greater than zero');
+        expect(result.message).toBe('Entry price must be > 0');
       }
     });
 
@@ -153,7 +153,7 @@ describe('calculatePnL', () => {
       const result = calculatePnL(-100, 100);
       expect('error' in result).toBe(true);
       if ('error' in result) {
-        expect(result.message).toBe('Entry price must be greater than zero');
+        expect(result.message).toBe('Entry price must be > 0');
       }
     });
 

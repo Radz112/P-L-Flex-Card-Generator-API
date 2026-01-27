@@ -194,14 +194,14 @@ describe('Concurrent Request Handling', () => {
     );
 
     // Verify each response matches its request
-    expect(results[0].body.metadata.is_profit).toBe(true);
-    expect(results[0].body.metadata.gain_percentage).toBe(100);
+    expect(results[0].body.metadata.profit).toBe(true);
+    expect(results[0].body.metadata.gain).toBe(100);
 
-    expect(results[1].body.metadata.is_profit).toBe(false);
-    expect(results[1].body.metadata.gain_percentage).toBe(-50);
+    expect(results[1].body.metadata.profit).toBe(false);
+    expect(results[1].body.metadata.gain).toBe(-50);
 
-    expect(results[2].body.metadata.is_profit).toBe(true);
-    expect(results[2].body.metadata.gain_percentage).toBe(0);
+    expect(results[2].body.metadata.profit).toBe(true);
+    expect(results[2].body.metadata.gain).toBe(0);
   });
 
   it('handles varying payload sizes concurrently', async () => {

@@ -1,5 +1,3 @@
-// P&L calculation and price formatting utilities
-
 export interface PnLResult {
   percentageGain: number;
   isProfit: boolean;
@@ -14,34 +12,27 @@ export interface PnLError {
 export type PnLCalculation = PnLResult | PnLError;
 
 export function calculatePnL(entryPrice: number, currentPrice: number): PnLCalculation {
-  if (entryPrice <= 0) {
-    return { error: true, message: 'Entry price must be greater than zero' };
-  }
-  if (currentPrice < 0) {
-    return { error: true, message: 'Current price cannot be negative' };
-  }
+  if (entryPrice <= 0) return { error: true, message: 'Entry price must be > 0' };
+  if (currentPrice < 0) return { error: true, message: 'Current price cannot be negative' };
 
-  const percentageGain = ((currentPrice - entryPrice) / entryPrice) * 100;
-  const isProfit = percentageGain >= 0;
-
+  const pct = ((currentPrice - entryPrice) / entryPrice) * 100;
   return {
-    percentageGain: roundPrecision(percentageGain),
-    isProfit,
-    formattedGain: formatPercentage(percentageGain)
+    percentageGain: roundPrecision(pct),
+    isProfit: pct >= 0,
+    formattedGain: formatPct(pct)
   };
 }
 
-function roundPrecision(value: number): number {
-  const abs = Math.abs(value);
-  if (abs >= 1000) return Math.round(value);
-  if (abs >= 1) return Math.round(value * 100) / 100;
-  return Math.round(value * 10000) / 10000;
+function roundPrecision(v: number): number {
+  const abs = Math.abs(v);
+  if (abs >= 1000) return Math.round(v);
+  if (abs >= 1) return Math.round(v * 100) / 100;
+  return Math.round(v * 10000) / 10000;
 }
 
-function formatPercentage(pct: number): string {
+function formatPct(pct: number): string {
   const prefix = pct >= 0 ? '+' : '';
   const abs = Math.abs(pct);
-
   if (abs >= 1000000) return `${prefix}${(pct / 1000000).toFixed(1)}M%`;
   if (abs >= 10000) return `${prefix}${(pct / 1000).toFixed(1)}K%`;
   if (abs >= 1000) return `${prefix}${Math.round(pct).toLocaleString()}%`;
@@ -53,7 +44,7 @@ function formatPercentage(pct: number): string {
 export function formatTokenPrice(price: number): string {
   if (price <= 0) return '$0';
 
-  // Tiny decimals (meme coins): show as $0.0{5}2400
+  // Meme coin format: $0.0{5}2400
   if (price < 0.00001) {
     const match = price.toFixed(20).match(/0\.(0*)([1-9]\d{0,3})/);
     if (match) return `$0.0{${match[1].length}}${match[2]}`;

@@ -1,4 +1,3 @@
-// P&L Flex Card Generator API Routes - APIX402 Pricing: $0.02 per call
 import { Router, Request, Response } from 'express';
 import { calculatePnL } from '../utils/pnlCalculator';
 import { renderCard, Theme, CardData } from '../services/cardRenderer';
@@ -25,26 +24,22 @@ function extractBody(body: any): CardRequest {
 
 function validate(b: CardRequest): string[] {
   const e: string[] = [];
-  if (!b.ticker || typeof b.ticker !== 'string' || !b.ticker.trim()) e.push('ticker is required');
-  else {
-    // Validate sanitized ticker, not raw input (sanitizeTicker strips invalid chars and truncates to 20)
-    const sanitized = sanitizeTicker(b.ticker);
-    if (!sanitized) e.push('ticker contains no valid characters (A-Z, 0-9, $)');
-  }
+  if (!b.ticker || typeof b.ticker !== 'string' || !b.ticker.trim()) e.push('ticker required');
+  else if (!sanitizeTicker(b.ticker)) e.push('ticker must contain A-Z, 0-9, or $');
 
-  if (b.entry_price == null) e.push('entry_price is required');
-  else if (typeof b.entry_price !== 'number' || !isFinite(b.entry_price)) e.push('entry_price must be a valid number');
-  else if (b.entry_price <= 0) e.push('entry_price must be greater than zero');
+  if (b.entry_price == null) e.push('entry_price required');
+  else if (typeof b.entry_price !== 'number' || !isFinite(b.entry_price)) e.push('entry_price must be number');
+  else if (b.entry_price <= 0) e.push('entry_price must be > 0');
   else if (b.entry_price < MIN_PRICE || b.entry_price > MAX_PRICE) e.push('entry_price out of range');
 
-  if (b.current_price == null) e.push('current_price is required');
-  else if (typeof b.current_price !== 'number' || !isFinite(b.current_price)) e.push('current_price must be a valid number');
+  if (b.current_price == null) e.push('current_price required');
+  else if (typeof b.current_price !== 'number' || !isFinite(b.current_price)) e.push('current_price must be number');
   else if (b.current_price < 0) e.push('current_price cannot be negative');
   else if (b.current_price > MAX_PRICE) e.push('current_price out of range');
 
-  if (b.theme != null && !THEMES.includes(b.theme as Theme)) e.push(`theme must be: ${THEMES.join(', ')}`);
-  if (b.wallet_tag != null && (typeof b.wallet_tag !== 'string' || b.wallet_tag.length > 50)) e.push('wallet_tag invalid');
-  if (b.timestamp != null && (typeof b.timestamp !== 'string' || b.timestamp.length > 100)) e.push('timestamp invalid');
+  if (b.theme && !THEMES.includes(b.theme)) e.push(`theme must be: ${THEMES.join(', ')}`);
+  if (b.wallet_tag && (typeof b.wallet_tag !== 'string' || b.wallet_tag.length > 50)) e.push('wallet_tag invalid');
+  if (b.timestamp && (typeof b.timestamp !== 'string' || b.timestamp.length > 100)) e.push('timestamp invalid');
   return e;
 }
 
@@ -52,16 +47,15 @@ router.get('/generate-card', (_req: Request, res: Response) => {
   res.json({
     endpoint: '/api/v1/generate-card',
     method: 'POST',
-    description: 'Generate P&L flex card image',
-    parameters: {
-      ticker: { type: 'string', required: true },
-      entry_price: { type: 'number', required: true },
-      current_price: { type: 'number', required: true },
-      theme: { type: 'string', required: false, default: 'dark', options: THEMES },
-      wallet_tag: { type: 'string', required: false },
-      timestamp: { type: 'string', required: false }
+    params: {
+      ticker: 'string, required',
+      entry_price: 'number, required',
+      current_price: 'number, required',
+      theme: `optional: ${THEMES.join('|')}`,
+      wallet_tag: 'optional string',
+      timestamp: 'optional string'
     },
-    apix402: { price: '$0.02', category: 'image-generation' }
+    price: '$0.02'
   });
 });
 
@@ -70,7 +64,6 @@ router.post('/generate-card', (req: Request, res: Response) => {
   try {
     const body = extractBody(req.body);
     const errors = validate(body);
-
     if (errors.length) {
       res.status(400).json({ success: false, error: 'Validation failed', details: errors });
       return;
@@ -89,7 +82,7 @@ router.post('/generate-card', (req: Request, res: Response) => {
       currentPrice: body.current_price,
       pnl,
       walletTag: body.wallet_tag ? sanitizeString(body.wallet_tag, 50) : undefined,
-      timestamp: body.timestamp ? sanitizeString(body.timestamp, 100) : new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
+      timestamp: body.timestamp || new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
     };
 
     const buffer = renderCard(cardData, theme);
@@ -98,7 +91,7 @@ router.post('/generate-card', (req: Request, res: Response) => {
     res.json({
       success: true,
       image: `data:image/png;base64,${buffer.toString('base64')}`,
-      metadata: { ticker: cardData.tokenSymbol, gain_percentage: pnl.percentageGain, formatted_gain: pnl.formattedGain, is_profit: pnl.isProfit, theme }
+      metadata: { ticker: cardData.tokenSymbol, gain: pnl.percentageGain, formatted: pnl.formattedGain, profit: pnl.isProfit, theme }
     });
   } catch (err) {
     logger.error('generate-card failed', err);
