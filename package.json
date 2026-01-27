@@ -1,0 +1,41 @@
+{
+  "name": "pl-flex-card-generator-api",
+  "version": "1.0.0",
+  "description": "API for generating P&L flex card images for crypto trading",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "ts-node src/index.ts",
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "docker:build": "docker build -t pl-card-api .",
+    "docker:run": "docker run -p 3000:3000 pl-card-api",
+    "docker:test": "npm run docker:build && npm run docker:run",
+    "clean": "rm -rf dist",
+    "prebuild": "npm run clean",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "pnl",
+    "crypto",
+    "trading",
+    "card",
+    "image-generation",
+    "canvas"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "canvas": "^3.2.1",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.0.10",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.3"
+  }
+}

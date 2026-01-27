@@ -1,0 +1,26 @@
+# Nixpacks configuration for Railway (alternative to Dockerfile)
+# Railway will auto-detect this if Dockerfile isn't present
+
+[phases.setup]
+nixPkgs = [
+    "nodejs-18_x",
+    "cairo",
+    "pango",
+    "libjpeg",
+    "giflib",
+    "librsvg",
+    "pkg-config",
+    "python3"
+]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "node dist/index.js"
+
+[variables]
+NODE_ENV = "production"
