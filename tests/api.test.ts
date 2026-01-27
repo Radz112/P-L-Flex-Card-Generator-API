@@ -4,15 +4,18 @@ import express from 'express';
 import cardRoutes from '../src/routes/cardRoutes';
 import { loadFonts } from '../src/utils/fontLoader';
 import { errorHandler, notFoundHandler } from '../src/utils/errorHandler';
+import { metricsMiddleware, getMetrics, resetMetrics } from '../src/utils/metrics';
 
 function createTestApp() {
   const fontStatus = loadFonts();
   const app = express();
+  app.use(metricsMiddleware);
   app.use(express.json({ limit: '1mb' }));
   app.get('/health', (_req, res) => {
     const ok = fontStatus.success;
     res.status(ok ? 200 : 503).json({ status: ok ? 'healthy' : 'degraded', fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length } });
   });
+  app.get('/metrics', (_req, res) => res.json(getMetrics()));
   app.use('/api/v1', cardRoutes);
   app.use(notFoundHandler);
   app.use(errorHandler);
@@ -279,6 +282,21 @@ describe('API', () => {
       const res = await request(server, 'POST', '/api/v1/generate-card', {});
       expect(res.body).toHaveProperty('success', false);
       expect(res.body).toHaveProperty('error');
+    });
+  });
+
+  describe('GET /metrics', () => {
+    it('returns metrics', async () => {
+      const res = await request(server, 'GET', '/metrics');
+      expect(res.status).toBe(200);
+      expect(res.body).toHaveProperty('uptime_seconds');
+      expect(res.body).toHaveProperty('total_requests');
+      expect(res.body).toHaveProperty('total_errors');
+      expect(res.body).toHaveProperty('error_rate_percent');
+      expect(res.body).toHaveProperty('avg_latency_ms');
+      expect(res.body).toHaveProperty('requests_per_minute');
+      expect(typeof res.body.total_requests).toBe('number');
+      expect(res.body.total_requests).toBeGreaterThan(0);
     });
   });
 });

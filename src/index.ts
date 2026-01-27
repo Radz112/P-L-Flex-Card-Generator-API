@@ -4,11 +4,13 @@ import debugRoutes from './routes/debugRoutes';
 import { loadFonts } from './utils/fontLoader';
 import { requestLogger, logger } from './utils/logger';
 import { errorHandler, notFoundHandler } from './utils/errorHandler';
+import { metricsMiddleware, getMetrics } from './utils/metrics';
 
 const fontStatus = loadFonts();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+app.use(metricsMiddleware);
 app.use(requestLogger);
 app.use(express.json({ limit: '1mb' }));
 
@@ -19,6 +21,10 @@ app.get('/health', (_req: Request, res: Response) => {
     uptime: process.uptime(),
     fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length }
   });
+});
+
+app.get('/metrics', (_req: Request, res: Response) => {
+  res.json(getMetrics());
 });
 
 app.use('/api/v1', cardRoutes);
