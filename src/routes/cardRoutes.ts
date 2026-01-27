@@ -26,7 +26,11 @@ function extractBody(body: any): CardRequest {
 function validate(b: CardRequest): string[] {
   const e: string[] = [];
   if (!b.ticker || typeof b.ticker !== 'string' || !b.ticker.trim()) e.push('ticker is required');
-  else if (b.ticker.length > 20) e.push('ticker must be 20 characters or less');
+  else {
+    // Validate sanitized ticker, not raw input (sanitizeTicker strips invalid chars and truncates to 20)
+    const sanitized = sanitizeTicker(b.ticker);
+    if (!sanitized) e.push('ticker contains no valid characters (A-Z, 0-9, $)');
+  }
 
   if (b.entry_price == null) e.push('entry_price is required');
   else if (typeof b.entry_price !== 'number' || !isFinite(b.entry_price)) e.push('entry_price must be a valid number');
@@ -85,7 +89,7 @@ router.post('/generate-card', (req: Request, res: Response) => {
       currentPrice: body.current_price,
       pnl,
       walletTag: body.wallet_tag ? sanitizeString(body.wallet_tag, 50) : undefined,
-      timestamp: body.timestamp ? sanitizeString(body.timestamp, 100) : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+      timestamp: body.timestamp ? sanitizeString(body.timestamp, 100) : new Date().toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' })
     };
 
     const buffer = renderCard(cardData, theme);

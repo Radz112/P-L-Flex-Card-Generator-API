@@ -8,10 +8,16 @@ import { errorHandler, notFoundHandler } from '../src/utils/errorHandler';
 
 // Create test app instance
 function createTestApp() {
-  loadFonts();
+  const fontStatus = loadFonts();
   const app = express();
   app.use(express.json({ limit: '1mb' }));
-  app.get('/health', (_req, res) => res.json({ status: 'healthy' }));
+  app.get('/health', (_req, res) => {
+    const isHealthy = fontStatus.success;
+    res.status(isHealthy ? 200 : 503).json({
+      status: isHealthy ? 'healthy' : 'degraded',
+      fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length, ok: fontStatus.success }
+    });
+  });
   app.use('/api/v1', cardRoutes);
   app.use(notFoundHandler);
   app.use(errorHandler);
@@ -104,10 +110,13 @@ describe('API Integration Tests', () => {
   });
 
   describe('GET /health', () => {
-    it('returns healthy status', async () => {
+    it('returns healthy status when fonts loaded', async () => {
       const res = await request(server, 'GET', '/health');
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('healthy');
+      expect(res.body.fonts.ok).toBe(true);
+      expect(res.body.fonts.loaded).toBeGreaterThan(0);
+      expect(res.body.fonts.failed).toBe(0);
     });
   });
 
@@ -274,15 +283,27 @@ describe('API Integration Tests', () => {
       expect(res.body.success).toBe(false);
     });
 
-    it('rejects ticker longer than 20 characters', async () => {
+    it('accepts long ticker that sanitizes to valid length', async () => {
+      // 'THISTICKERISWAYTOOLONG' is 22 chars but sanitizes/truncates to 20
       const res = await request(server, 'POST', '/api/v1/generate-card', {
         ticker: 'THISTICKERISWAYTOOLONG',
         entry_price: 100,
         current_price: 200
       });
 
+      expect(res.status).toBe(200);
+      expect(res.body.metadata.ticker).toBe('THISTICKERISWAYTOOLO'); // Truncated to 20
+    });
+
+    it('rejects ticker with no valid characters after sanitization', async () => {
+      const res = await request(server, 'POST', '/api/v1/generate-card', {
+        ticker: '!@#%^&*()',
+        entry_price: 100,
+        current_price: 200
+      });
+
       expect(res.status).toBe(400);
-      expect(res.body.details).toContain('ticker must be 20 characters or less');
+      expect(res.body.details).toContain('ticker contains no valid characters (A-Z, 0-9, $)');
     });
 
     it('rejects missing entry_price', async () => {
@@ -514,16 +535,17 @@ describe('API Integration Tests', () => {
   });
 
   describe('POST /api/v1/generate-card - Input sanitization', () => {
-    it('rejects ticker that exceeds max length after XSS attempt', async () => {
-      // '<script>alert(1)</script>' is 25 chars, exceeds 20 char limit
+    it('sanitizes XSS attempt in ticker to valid alphanumeric', async () => {
+      // '<script>alert(1)</script>' sanitizes to 'SCRIPTALERT1SCRIPT' (19 chars)
       const res = await request(server, 'POST', '/api/v1/generate-card', {
         ticker: '<script>alert(1)</script>',
         entry_price: 100,
         current_price: 200
       });
 
-      // Fails validation because input exceeds 20 chars
-      expect(res.status).toBe(400);
+      // Succeeds because sanitization removes <> and result is valid
+      expect(res.status).toBe(200);
+      expect(res.body.metadata.ticker).toBe('SCRIPTALERT1SCRIPT');
     });
 
     it('sanitizes ticker with special characters when within length limit', async () => {

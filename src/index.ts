@@ -14,11 +14,12 @@ app.use(requestLogger);
 app.use(express.json({ limit: '1mb' }));
 
 app.get('/health', (_req: Request, res: Response) => {
-  res.json({
-    status: 'healthy',
+  const isHealthy = fontStatus.success;
+  res.status(isHealthy ? 200 : 503).json({
+    status: isHealthy ? 'healthy' : 'degraded',
     uptime: process.uptime(),
-    version: '1.0.0',
-    fonts: { loaded: fontStatus.loaded.length, ok: fontStatus.success }
+    version: process.env.npm_package_version || '1.0.0',
+    fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length, ok: fontStatus.success }
   });
 });
 
@@ -33,4 +34,4 @@ app.listen(PORT, () => {
 });
 
 process.on('uncaughtException', (err) => { logger.error('Uncaught', err); process.exit(1); });
-process.on('unhandledRejection', (err) => { logger.error('Unhandled', err); });
+process.on('unhandledRejection', (err) => { logger.error('Unhandled rejection', err); process.exit(1); });
