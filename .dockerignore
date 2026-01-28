@@ -1,42 +1,7 @@
-# Dependencies
 node_modules
-
-# Build output
 dist
-
-# Git
 .git
-.gitignore
-
-# IDE
-.vscode
-.idea
-*.swp
-*.swo
-
-# OS files
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-npm-debug.log*
-
-# Test files
-*.test.ts
-*.spec.ts
-__tests__
-coverage
-
-# Environment files (secrets should be set via Railway)
+*.md
 .env
 .env.*
-
-# Documentation
-README.md
-docs
-
-# Docker
-Dockerfile
-.dockerignore
-docker-compose*.yml
+!.env.example
