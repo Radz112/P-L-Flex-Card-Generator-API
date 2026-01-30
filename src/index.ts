@@ -9,17 +9,45 @@ import { metricsMiddleware, getMetrics } from './utils/metrics';
 const fontStatus = loadFonts();
 const app = express();
 const PORT = process.env.PORT || 3000;
+const PAY_TO_ADDRESS = process.env.PAY_TO_ADDRESS || "0xd6f242D083bd27Eb9255Ed73cCE5617655A74d6d";
+
+const paymentInfo = {
+  pay_to: PAY_TO_ADDRESS,
+  network: "base-sepolia",
+  currency: "USDC"
+};
 
 app.use(metricsMiddleware);
 app.use(requestLogger);
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/health', (_req: Request, res: Response) => {
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    name: "PL Flex Card Generator API",
+    version: "1.0.0",
+    description: "API for generating P&L flex card images for crypto trading",
+    payment: paymentInfo
+  });
+});
+
+app.get('/api/v1/health', (_req: Request, res: Response) => {
   const ok = fontStatus.success;
   res.status(ok ? 200 : 503).json({
     status: ok ? 'healthy' : 'degraded',
     uptime: process.uptime(),
-    fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length }
+    fonts: { loaded: fontStatus.loaded.length, failed: fontStatus.failed.length },
+    payment: paymentInfo
+  });
+});
+
+app.get('/api/v1/pricing', (_req: Request, res: Response) => {
+  res.json({
+    name: "PL Flex Card Generator API",
+    version: "1.0.0",
+    endpoints: {
+      "POST /api/v1/generate-card": "$0.02 per card"
+    },
+    payment: paymentInfo
   });
 });
 

@@ -61,6 +61,7 @@ function validate(b: CardRequest): string[] {
 }
 
 router.get('/generate-card', (_req: Request, res: Response) => {
+  const PAY_TO_ADDRESS = process.env.PAY_TO_ADDRESS || "0xd6f242D083bd27Eb9255Ed73cCE5617655A74d6d";
   res.json({
     endpoint: '/api/v1/generate-card',
     method: 'POST',
@@ -72,7 +73,12 @@ router.get('/generate-card', (_req: Request, res: Response) => {
       wallet_tag: 'optional string',
       timestamp: 'optional string'
     },
-    price: '$0.02'
+    price: '$0.02',
+    payment: {
+      pay_to: PAY_TO_ADDRESS,
+      network: "base-sepolia",
+      currency: "USDC"
+    }
   });
 });
 
